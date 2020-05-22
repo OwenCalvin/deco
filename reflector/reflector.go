@@ -16,12 +16,12 @@ func ReflectAll(r ...interface{}) (types [][]interface{}) {
 }
 
 // Reflect returns the fields of a struct
-func Reflect(r interface{}) (fields [][]string) {
+func Reflect(r interface{}) (fields [][]interface{}) {
 	e := reflect.ValueOf(r).Elem()
 
 	for i := 0; i < e.NumField(); i++ {
 		field := e.Type().Field(i)
-		infos := []string{field.Name, field.Type.Name()}
+		infos := []interface{}{field.Name, field.Type}
 		fields = append(fields, infos)
 	}
 
