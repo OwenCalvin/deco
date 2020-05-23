@@ -4,25 +4,43 @@ import (
 	"reflect"
 )
 
-// ReflectAll returns the types with their fields
-func ReflectAll(r ...interface{}) (types [][]interface{}) {
-	for _, item := range r {
-		name := reflect.TypeOf(item).Elem().Name()
-		typeDef := []interface{}{name, Reflect(item)}
-		types = append(types, typeDef)
-	}
-
-	return types
+type Reflected struct {
+	rType   reflect.Type
+	fields  []reflect.StructField
+	methods []reflect.Method
 }
 
-// Reflect returns the fields of a struct
-func Reflect(r interface{}) (fields [][]interface{}) {
+// ReflectTypes returns the types with their fields
+func ReflectTypes(r ...interface{}) (reflections []Reflected) {
+	for _, item := range r {
+		r := Reflected{}
+		r.rType = reflect.TypeOf(item).Elem()
+		r.fields = ReflectFields(item)
+		r.methods = ReflectMethods(item)
+
+		reflections = append(reflections, r)
+	}
+
+	return reflections
+}
+
+// ReflectMethods returns the fields of a struct
+func ReflectMethods(r interface{}) (methods []reflect.Method) {
+	e := reflect.TypeOf(r)
+
+	for i := 0; i < e.NumMethod(); i++ {
+		methods = append(methods, e.Method(i))
+	}
+
+	return methods
+}
+
+// ReflectFields returns the fields of a struct
+func ReflectFields(r interface{}) (fields []reflect.StructField) {
 	e := reflect.ValueOf(r).Elem()
 
 	for i := 0; i < e.NumField(); i++ {
-		field := e.Type().Field(i)
-		infos := []interface{}{field.Name, field.Type}
-		fields = append(fields, infos)
+		fields = append(fields, e.Type().Field(i))
 	}
 
 	return fields

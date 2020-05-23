@@ -1,24 +1,26 @@
 package main
 
 import (
-	"dry/reflector"
-	"fmt"
+	"dego/graphql"
 )
 
-type admin struct {
+type Admin struct {
 	access string
 }
 
-type user struct {
-	admin
+type User struct {
+	Admin
 	Name string
 }
 
-func main() {
-	allReflection := reflector.ReflectAll(
-		&user{},
-		&admin{},
-	)
+func (u *User) Get() {
+}
 
-	fmt.Println(allReflection)
+func main() {
+	graphql.New(
+		"/graphql",
+		"8080",
+		&User{},
+		&Admin{},
+	)
 }
