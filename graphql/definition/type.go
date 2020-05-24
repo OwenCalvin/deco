@@ -2,33 +2,41 @@ package definition
 
 import "reflect"
 
-// GqlType represents a GraphQL type
-type GqlType struct {
-	Name   string
-	Fields []Field
+// AnyType represents a GraphQL type (object, input or interface)
+type AnyType interface {
 }
 
-// GqlObject represents a GraphQL object type
-type GqlObject struct {
-	GqlType
+// Type represents a GraphQL type (object or interface)
+type Type struct {
+	Description      string
+	Name             string
+	FieldsDefinition Fields
 }
 
-// GqlInterface represents a GraphQL interface type
-type GqlInterface struct {
-	GqlType
+// OutpoutType represents a GraphQL type (object, input or interface)
+type OutpoutType struct {
+	Type
+	AnyType
+	Directives []Directive
 }
 
-// GqlInput represents a GraphQL input type
-type GqlInput struct {
-	GqlType
+// Object represents a GraphQL object type
+type Object struct {
+	OutpoutType
+	ImplementsInterfaces []string
 }
 
-func (g GqlType) FromReflection(rType reflect.Type, fields []reflect.StructField, methods []reflect.Method) GqlType {
-	return GqlType{
-		Name: rType.Name(),
-		Fields: []Field{{
-			Name:    "yo",
-			GqlType: "string",
-		}},
-	}
+// Interface represents a GraphQL interface type
+type Interface struct {
+	OutpoutType
+}
+
+// Input represents a GraphQL input type
+type Input struct {
+	Type
+	FieldsDefinition []Field
+}
+
+// FromReflection creates a type from reflection
+func FromReflection(rType reflect.Type, fields []reflect.StructField, methods []reflect.Method) {
 }

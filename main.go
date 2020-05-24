@@ -2,6 +2,7 @@ package main
 
 import (
 	"dego/graphql"
+	"dego/graphql/server"
 )
 
 type Admin struct {
@@ -13,14 +14,18 @@ type User struct {
 	Name string
 }
 
-func (u *User) Get() {
+func (u *User) GetQuery(
+	l struct{ Name string },
+) struct{ Name string } {
+	return struct{ Name string }{Name: "yo"}
 }
 
 func main() {
-	graphql.New(
+	schema := graphql.LoadTypes(&User{}, &Admin{})
+
+	server.Serve(
+		schema,
 		"/graphql",
 		"8080",
-		&User{},
-		&Admin{},
 	)
 }

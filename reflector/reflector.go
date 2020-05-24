@@ -5,18 +5,20 @@ import (
 )
 
 type Reflected struct {
-	rType   reflect.Type
-	fields  []reflect.StructField
-	methods []reflect.Method
+	Type     reflect.Type
+	Original interface{}
+	Fields   []reflect.StructField
+	Methods  []reflect.Method
 }
 
 // ReflectTypes returns the types with their fields
 func ReflectTypes(r ...interface{}) (reflections []Reflected) {
 	for _, item := range r {
 		r := Reflected{}
-		r.rType = reflect.TypeOf(item).Elem()
-		r.fields = ReflectFields(item)
-		r.methods = ReflectMethods(item)
+		r.Original = item
+		r.Type = reflect.TypeOf(item).Elem()
+		r.Fields = ReflectFields(item)
+		r.Methods = ReflectMethods(item)
 
 		reflections = append(reflections, r)
 	}

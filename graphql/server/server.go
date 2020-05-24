@@ -1,13 +1,17 @@
-package graphql
+package server
 
 import (
 	"bytes"
-	"dego/reflector"
+	"dego/graphql/definition"
+	"dego/graphql/executor"
+	"dego/graphql/language/parser"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 )
+
+var schema definition.Schema
 
 type Context struct {
 }
@@ -23,15 +27,22 @@ func (r *Request) String() string {
 	return r.Query
 }
 
-func parseRequest(request string) {
+func parseRequest(request string) interface{} {
 	req := &Request{}
 	json.Unmarshal([]byte(request), req)
 	fmt.Println(req)
-	if req.Query != "" {
+	doc, _ := parser.Parse(parser.ParseParams{
+		Source: req.Query,
+		Options: parser.ParseOptions{
+			NoLocation: false,
+			NoSource:   false,
+		},
+	})
 
-	} else if req.Mutation != "" {
-
-	}
+	return executor.Execute(&executor.ExecutionParams{
+		Schema: schema,
+		AST:    doc,
+	})
 }
 
 func parseBody(r *http.Request) string {
@@ -41,7 +52,10 @@ func parseBody(r *http.Request) string {
 }
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
-	parseRequest(parseBody(r))
+	res := parseRequest(parseBody(r))
+	resJson, _ := json.Marshal(res)
+
+	fmt.Fprint(w, string(resJson))
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
@@ -62,10 +76,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func New(path string, port string, types ...interface{}) {
-	allReflections := reflector.ReflectTypes(types...)
-	fmt.Println(allReflections)
-
+func Serve(sch definition.Schema, path string, port string) {
+	schema = sch
 	http.HandleFunc(path, handler)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
