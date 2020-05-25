@@ -34,6 +34,12 @@ func (s *Schema) Send(res interface{}, infos Infos) map[string]interface{} {
 	return sendable
 }
 
+func visitSelections(selectionSet *ast.SelectionSet) {
+	for _, s := range selectionSet.Selections {
+		ss := s.GetSelectionSet()
+	}
+}
+
 func parseArgs(field *Field, args []*ast.Argument) interface{} {
 	structValue := reflect.New(field.ArgStructType)
 

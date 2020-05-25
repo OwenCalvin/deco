@@ -1,9 +1,9 @@
 <p align="center">
-  <img width="250px" src="https://i.imgur.com/9mWiYaA.png">
+  <img width="250px" src="https://i.imgur.com/F6sWgZh.png">
 </p>
 <h4>
   <p align="center">
-    Create your GraphQL api based on your structs (DRY) while using the power of Go
+    Create your GraphQL API based on your structs (DRY) while using the power of Go
   </p>
   <p align="center">
     WIP
