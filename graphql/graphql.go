@@ -14,15 +14,15 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 	reflections := reflector.ReflectTypes(r...)
 
 	schema.TypeMap[definition.QUERY] = definition.Type{
-		Name:             definition.QUERY,
-		Description:      "",
-		FieldsDefinition: make(definition.Fields),
+		Name:        definition.QUERY,
+		Description: "",
+		Fields:      make(definition.Fields),
 	}
 
 	schema.TypeMap[definition.MUTATION] = definition.Type{
-		Name:             definition.MUTATION,
-		Description:      "",
-		FieldsDefinition: make(definition.Fields),
+		Name:        definition.MUTATION,
+		Description: "",
+		Fields:      make(definition.Fields),
 	}
 
 	for _, item := range reflections {
@@ -40,14 +40,17 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 		for _, method := range item.Methods {
 			isQueryOrMutation := false
 			queryType := ""
+			queryName := method.Name
 
 			switch {
 			case strings.HasSuffix(method.Name, definition.QUERY):
 				isQueryOrMutation = true
 				queryType = definition.QUERY
+				queryName = strings.ReplaceAll(queryName, definition.QUERY, "")
 			case strings.HasSuffix(method.Name, definition.MUTATION):
 				isQueryOrMutation = true
 				queryType = definition.MUTATION
+				queryName = strings.ReplaceAll(queryName, definition.MUTATION, "")
 			}
 
 			if !isQueryOrMutation {
@@ -60,23 +63,22 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 
 			for i := 0; i < firstArg.NumField(); i++ {
 				arg := firstArg.Field(i)
-				argKey := definition.ArgumentKey{
-					Name:        arg.Name,
-					Description: "",
-				}
-				argValue := definition.ArgumentValue{
+				argValue := definition.Argument{
+					Name:         arg.Name,
+					Description:  "",
 					Type:         arg.Type.Name(),
 					DefaultValue: nil,
 				}
-				args[argKey] = argValue
+				args[argValue.Name] = argValue
 			}
 
 			returnType := method.Type.Out(0)
 			fieldValue := definition.Field{
-				Name:                method.Name,
-				Type:                returnType.Name(),
-				TypeRef:             item.Original,
-				ArgumentsDefinition: args,
+				Name:          queryName,
+				Type:          returnType.Name(),
+				TypeRef:       item.Original,
+				Args:          args,
+				ArgStructType: firstArg,
 			}
 
 			fieldValue.Resolve = func(v ...interface{}) interface{} {
@@ -87,13 +89,13 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 				return res[0].Interface()
 			}
 
-			schema.TypeMap[queryType].FieldsDefinition[method.Name] = fieldValue
+			schema.TypeMap[queryType].Fields[queryName] = fieldValue
 		}
 
 		t := definition.Type{
-			Name:             typeName,
-			Description:      "",
-			FieldsDefinition: fields,
+			Name:        typeName,
+			Description: "",
+			Fields:      fields,
 		}
 
 		schema.TypeMap[typeName] = t

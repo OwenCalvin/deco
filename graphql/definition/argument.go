@@ -1,17 +1,13 @@
 package definition
 
-// ArgumentKey represents a GraphQL argument key
-type ArgumentKey struct {
-	Description string
-	Name        string
-}
-
 // ArgumentValue represents a GraphQL argument value
-type ArgumentValue struct {
+type Argument struct {
+	Description  string
+	Name         string
 	Type         string
 	DefaultValue interface{}
 	Directives   []Directive
 }
 
 // Arguments represents a GraphQL argument list
-type Arguments map[ArgumentKey]ArgumentValue
+type Arguments map[string]Argument

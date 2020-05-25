@@ -8,9 +8,9 @@ type AnyType interface {
 
 // Type represents a GraphQL type (object or interface)
 type Type struct {
-	Description      string
-	Name             string
-	FieldsDefinition Fields
+	Description string
+	Name        string
+	Fields      Fields
 }
 
 // OutpoutType represents a GraphQL type (object, input or interface)

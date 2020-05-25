@@ -23,11 +23,16 @@ type Request struct {
 	Mutation      string      `json:"mutation"`
 }
 
+type Response struct {
+	Data  interface{} `json:"data"`
+	Error interface{} `json:"error"`
+}
+
 func (r *Request) String() string {
 	return r.Query
 }
 
-func parseRequest(request string) interface{} {
+func parseRequest(request string) (res interface{}, err error) {
 	req := &Request{}
 	json.Unmarshal([]byte(request), req)
 	fmt.Println(req)
@@ -52,10 +57,15 @@ func parseBody(r *http.Request) string {
 }
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
-	res := parseRequest(parseBody(r))
-	resJson, _ := json.Marshal(res)
+	res, err := parseRequest(parseBody(r))
 
-	fmt.Fprint(w, string(resJson))
+	finalRes := Response{
+		Data:  res,
+		Error: err,
+	}
+	resJSON, _ := json.Marshal(finalRes)
+
+	fmt.Fprint(w, string(resJSON))
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
