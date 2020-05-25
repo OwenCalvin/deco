@@ -81,12 +81,14 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 				ArgStructType: firstArg,
 			}
 
-			fieldValue.Resolve = func(v ...interface{}) interface{} {
+			fieldValue.Resolve = func(ref interface{}, args interface{}, infos definition.Infos) interface{} {
 				res := method.Func.Call([]reflect.Value{
-					reflect.ValueOf(v[0]),
-					reflect.ValueOf(v[1]),
+					reflect.ValueOf(ref),
+					reflect.ValueOf(args),
+					reflect.ValueOf(infos),
 				})
-				return res[0].Interface()
+
+				return schema.Send(res[0].Interface(), infos)
 			}
 
 			schema.TypeMap[queryType].Fields[queryName] = fieldValue

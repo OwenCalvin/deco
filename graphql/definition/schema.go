@@ -12,14 +12,26 @@ type Schema struct {
 	TypeMap    map[string]Type
 }
 
-func (s *Schema) Execute(operation string, field string, arguments []*ast.Argument) (res interface{}, err error) {
+func (s *Schema) Execute(
+	operation string,
+	field string,
+	node *ast.Field,
+) (res interface{}, executedField *Field, err error) {
 	f, ok := s.TypeMap[operation].Fields[field]
 	if ok {
-		parsedArgs := parseArgs(&f, arguments)
-		res := f.Resolve(f.TypeRef, parsedArgs)
-		return res, nil
+		parsedArgs := parseArgs(&f, node.Arguments)
+		res := f.Resolve(f.TypeRef, parsedArgs, Infos{
+			Field:     f,
+			Requested: *node,
+		})
+		return res, &f, nil
 	}
-	return nil, fmt.Errorf("Operation not found")
+	return nil, nil, fmt.Errorf("Operation not found")
+}
+
+func (s *Schema) Send(res interface{}, infos Infos) map[string]interface{} {
+	sendable := make(map[string]interface{})
+	return sendable
 }
 
 func parseArgs(field *Field, args []*ast.Argument) interface{} {

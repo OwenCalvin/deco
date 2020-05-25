@@ -2,6 +2,7 @@ package main
 
 import (
 	"dego/graphql"
+	"dego/graphql/definition"
 	"dego/graphql/server"
 )
 
@@ -16,6 +17,7 @@ type User struct {
 
 func (u *User) GetQuery(
 	l struct{ Name string },
+	infos definition.Infos,
 ) struct{ Name string } {
 	return struct{ Name string }{Name: "yo"}
 }

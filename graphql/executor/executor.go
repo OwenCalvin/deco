@@ -25,6 +25,6 @@ func Execute(execParams *ExecutionParams) (res interface{}, err error) {
 func executeFields(execParams *ExecutionParams, fieldsRoot *ast.SelectionSet) {
 	for _, s := range fieldsRoot.Selections {
 		field := s.(*ast.Field)
-		execParams.Schema.Execute("Query", field.Name.Value, field.Arguments)
+		execParams.Schema.Execute("Query", field.Name.Value, field)
 	}
 }

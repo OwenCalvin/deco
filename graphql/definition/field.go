@@ -1,6 +1,8 @@
 package definition
 
-import "reflect"
+import (
+	"reflect"
+)
 
 // FieldResolver represents implements the resolve func for a field
 type FieldResolver interface {
@@ -9,7 +11,7 @@ type FieldResolver interface {
 
 // Field represents a GraphQL field value
 type Field struct {
-	Resolve       func(v ...interface{}) interface{}
+	Resolve       func(ref interface{}, args interface{}, infos Infos) interface{}
 	Name          string
 	Args          Arguments
 	Type          string
