@@ -30,14 +30,49 @@ func (s *Schema) Execute(
 }
 
 func (s *Schema) Send(res interface{}, infos Infos) map[string]interface{} {
-	sendable := make(map[string]interface{})
-	return sendable
+	return selectFields(res, &infos.Requested.SelectionSet.Selections)
 }
 
-func visitSelections(selectionSet *ast.SelectionSet) {
-	for _, s := range selectionSet.Selections {
-		ss := s.GetSelectionSet()
+func selectFields(obj interface{}, selections *[]ast.Selection) (res map[string]interface{}) {
+	if selections == nil {
+		return nil
 	}
+
+	res = map[string]interface{}{}
+	value := reflect.ValueOf(obj)
+
+	for i := 0; i < value.NumField(); i++ {
+		var selected *ast.Field = nil
+		rField := value.Type().Field(i)
+
+		for _, s := range *selections {
+			f := s.(*ast.Field)
+			if f.Name.Value == rField.Name {
+				selected = f
+				break
+			}
+		}
+
+		if selected == nil {
+			continue
+		}
+
+		var v interface{}
+		value := value.Field(i).Interface()
+
+		switch rField.Type.Kind() {
+		case reflect.Struct:
+			v = selectFields(value, &selected.SelectionSet.Selections)
+		default:
+			v = value
+		}
+
+		if v != nil {
+			res[rField.Name] = v
+		}
+	}
+
+	return res
 }
 
 func parseArgs(field *Field, args []*ast.Argument) interface{} {

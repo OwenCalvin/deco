@@ -18,8 +18,14 @@ type User struct {
 func (u *User) GetQuery(
 	l struct{ Name string },
 	infos definition.Infos,
-) struct{ Name string } {
-	return struct{ Name string }{Name: "yo"}
+) struct {
+	Name string
+	Z    struct{ F string }
+} {
+	return struct {
+		Name string
+		Z    struct{ F string }
+	}{Name: "yo", Z: struct{ F string }{F: "d"}}
 }
 
 func main() {
