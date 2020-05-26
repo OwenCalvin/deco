@@ -11,20 +11,46 @@ type ExecutionParams struct {
 }
 
 func Execute(execParams *ExecutionParams) (res interface{}, err error) {
+	var executable *ast.OperationDefinition
+	fragments := make(map[string]*ast.FragmentDefinition)
+
 	for _, def := range execParams.AST.Definitions {
 		switch def.(type) {
 		case *ast.OperationDefinition:
-			fDef := def.(*ast.OperationDefinition)
-			executeFields(execParams, fDef.SelectionSet)
+			executable = def.(*ast.OperationDefinition)
 		case *ast.FragmentDefinition:
+			f := def.(*ast.FragmentDefinition)
+			fragments[f.Name.Value] = f
 		}
 	}
+
+	executeFields(execParams, fragments, executable.SelectionSet)
+
 	return nil, nil
 }
 
-func executeFields(execParams *ExecutionParams, fieldsRoot *ast.SelectionSet) {
-	for _, s := range fieldsRoot.Selections {
+func parseFragment(executable *ast.OperationDefinition, fragment *ast.FragmentDefinition) {
+}
+
+func executeFields(execParams *ExecutionParams, fragments map[string]*ast.FragmentDefinition, fieldsRoot *ast.SelectionSet) {
+	for i, s := range fieldsRoot.Selections {
 		field := s.(*ast.Field)
-		execParams.Schema.Execute("Query", field.Name.Value, field)
+		operation := execParams.AST.Definitions[i].(*ast.OperationDefinition).Operation
+
+		switch operation {
+		case "query":
+			operation = "Query"
+		case "mutation":
+			operation = "Mutation"
+		case "subscription":
+			operation = "Subscription"
+		}
+
+		execParams.Schema.Execute(
+			operation,
+			field.Name.Value,
+			field,
+			fragments,
+		)
 	}
 }

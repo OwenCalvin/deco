@@ -15,7 +15,9 @@ type User struct {
 	Name string
 }
 
-func (u *User) GetQuery(
+type Query struct{}
+
+func (u *Query) Get(
 	l struct{ Name string },
 	infos definition.Infos,
 ) struct {
@@ -29,7 +31,11 @@ func (u *User) GetQuery(
 }
 
 func main() {
-	schema := graphql.LoadTypes(&User{}, &Admin{})
+	schema := graphql.LoadTypes(
+		&Query{},
+		&User{},
+		&Admin{},
+	)
 
 	server.Serve(
 		schema,

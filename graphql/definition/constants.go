@@ -10,3 +10,8 @@ const (
 	QUERY    = "Query"
 	MUTATION = "Mutation"
 )
+
+var specialFields = []string{
+	"__schema",
+	"__typename",
+}

@@ -2,27 +2,20 @@ package graphql
 
 import (
 	"dego/graphql/definition"
+	"dego/graphql/queries"
 	"dego/reflector"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
 func LoadTypes(r ...interface{}) (schema definition.Schema) {
+	types := r
+	types = append(types, &queries.IntrospectionQuery{})
+	reflections := reflector.ReflectTypes(types...)
+
 	schema = definition.Schema{
 		TypeMap: make(map[string]definition.Type),
-	}
-	reflections := reflector.ReflectTypes(r...)
-
-	schema.TypeMap[definition.QUERY] = definition.Type{
-		Name:        definition.QUERY,
-		Description: "",
-		Fields:      make(definition.Fields),
-	}
-
-	schema.TypeMap[definition.MUTATION] = definition.Type{
-		Name:        definition.MUTATION,
-		Description: "",
-		Fields:      make(definition.Fields),
 	}
 
 	for _, item := range reflections {
@@ -38,47 +31,37 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 		}
 
 		for _, method := range item.Methods {
-			isQueryOrMutation := false
-			queryType := ""
 			queryName := method.Name
-
-			switch {
-			case strings.HasSuffix(method.Name, definition.QUERY):
-				isQueryOrMutation = true
-				queryType = definition.QUERY
-				queryName = strings.ReplaceAll(queryName, definition.QUERY, "")
-			case strings.HasSuffix(method.Name, definition.MUTATION):
-				isQueryOrMutation = true
-				queryType = definition.MUTATION
-				queryName = strings.ReplaceAll(queryName, definition.MUTATION, "")
-			}
-
-			if !isQueryOrMutation {
-				continue
-			}
 
 			args := definition.Arguments{}
 
-			firstArg := method.Type.In(1)
-
-			for i := 0; i < firstArg.NumField(); i++ {
-				arg := firstArg.Field(i)
-				argValue := definition.Argument{
-					Name:         arg.Name,
-					Description:  "",
-					Type:         arg.Type.Name(),
-					DefaultValue: nil,
-				}
-				args[argValue.Name] = argValue
+			if method.Type.NumOut() <= 0 {
+				panic(fmt.Errorf("You must specify a return type for %v.%v", item.Type.Elem().Name, queryName))
 			}
 
 			returnType := method.Type.Out(0)
 			fieldValue := definition.Field{
-				Name:          queryName,
-				Type:          returnType.Name(),
-				TypeRef:       item.Original,
-				Args:          args,
-				ArgStructType: firstArg,
+				Name:    queryName,
+				Type:    returnType.Name(),
+				TypeRef: item.Original,
+				Args:    args,
+			}
+
+			if method.Type.NumIn() > 1 {
+				firstArg := method.Type.In(1)
+
+				for i := 0; i < firstArg.NumField(); i++ {
+					arg := firstArg.Field(i)
+					argValue := definition.Argument{
+						Name:         arg.Name,
+						Description:  "",
+						Type:         arg.Type.Name(),
+						DefaultValue: nil,
+					}
+					args[arg.Name] = argValue
+				}
+
+				fieldValue.ArgStructType = firstArg
 			}
 
 			fieldValue.Resolve = func(ref interface{}, args interface{}, infos definition.Infos) interface{} {
@@ -91,7 +74,14 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 				return schema.Send(res[0].Interface(), infos)
 			}
 
-			schema.TypeMap[queryType].Fields[queryName] = fieldValue
+			switch {
+			case strings.HasSuffix(queryName, definition.QUERY):
+				addFieldToTypeMap(&schema, definition.QUERY, queryName, fieldValue)
+			case strings.HasSuffix(queryName, definition.MUTATION):
+				addFieldToTypeMap(&schema, definition.MUTATION, queryName, fieldValue)
+			default:
+				fields[queryName] = fieldValue
+			}
 		}
 
 		t := definition.Type{
@@ -104,4 +94,10 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 	}
 
 	return schema
+}
+
+func addFieldToTypeMap(schema *definition.Schema, key string, name string, field definition.Field) {
+	c := strings.LastIndex(name, key)
+	finalQueryName := name[:c]
+	schema.TypeMap[key].Fields[finalQueryName] = field
 }

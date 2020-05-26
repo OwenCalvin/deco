@@ -11,13 +11,15 @@ type FieldResolver interface {
 
 // Field represents a GraphQL field value
 type Field struct {
-	Resolve       func(ref interface{}, args interface{}, infos Infos) interface{}
-	Name          string
-	Args          Arguments
-	Type          string
-	TypeRef       interface{}
-	Directives    []Directive
-	ArgStructType reflect.Type
+	Resolve           func(ref interface{}, args interface{}, infos Infos) interface{}
+	Name              string
+	Args              Arguments
+	Type              string
+	TypeRef           interface{}
+	Directives        []Directive
+	ArgStructType     reflect.Type
+	isDeprecated      bool
+	deprecationReason string
 }
 
 // Fields represents a GraphQL list of fields

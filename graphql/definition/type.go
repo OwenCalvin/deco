@@ -11,6 +11,7 @@ type Type struct {
 	Description string
 	Name        string
 	Fields      Fields
+	Kind        string
 }
 
 // OutpoutType represents a GraphQL type (object, input or interface)

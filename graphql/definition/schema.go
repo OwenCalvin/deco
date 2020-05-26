@@ -8,14 +8,19 @@ import (
 
 // Schema represents a graphql schema
 type Schema struct {
-	Directives []Directive
-	TypeMap    map[string]Type
+	Directives       []Directive
+	TypeMap          map[string]Type
+	Types            []Type
+	SubscriptionType Type
+	QueryType        Type
+	MutationType     Type
 }
 
 func (s *Schema) Execute(
 	operation string,
 	field string,
 	node *ast.Field,
+	fragments map[string]*ast.FragmentDefinition,
 ) (res interface{}, executedField *Field, err error) {
 	f, ok := s.TypeMap[operation].Fields[field]
 	if ok {

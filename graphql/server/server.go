@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-var schema definition.Schema
+var Schema definition.Schema
 
 type Context struct {
 }
@@ -45,7 +45,7 @@ func parseRequest(request string) (res interface{}, err error) {
 	})
 
 	return executor.Execute(&executor.ExecutionParams{
-		Schema: schema,
+		Schema: Schema,
 		AST:    doc,
 	})
 }
@@ -87,7 +87,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func Serve(sch definition.Schema, path string, port string) {
-	schema = sch
+	Schema = sch
 	http.HandleFunc(path, handler)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
