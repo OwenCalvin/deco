@@ -1,9 +1,9 @@
 package main
 
 import (
-	"dego/graphql"
-	"dego/graphql/definition"
-	"dego/graphql/server"
+	"deco/graphql"
+	"deco/graphql/definition"
+	"deco/graphql/server"
 )
 
 type Admin struct {

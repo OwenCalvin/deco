@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"dego/graphql/language/ast"
+	"deco/graphql/language/ast"
 	"errors"
 )
 

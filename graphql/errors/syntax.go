@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	"dego/graphql/language/ast"
-	"dego/graphql/language/location"
-	"dego/graphql/language/source"
+	"deco/graphql/language/ast"
+	"deco/graphql/language/location"
+	"deco/graphql/language/source"
 )
 
 func NewSyntaxError(s *source.Source, position int, description string) *Error {

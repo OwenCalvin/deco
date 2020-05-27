@@ -6,8 +6,8 @@ import (
 
 	"reflect"
 
-	"dego/graphql/language/ast"
-	"dego/graphql/language/visitor"
+	"deco/graphql/language/ast"
+	"deco/graphql/language/visitor"
 )
 
 func getMapValue(m map[string]interface{}, key string) interface{} {

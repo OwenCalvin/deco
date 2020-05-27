@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"dego/graphql/language/ast"
-	"dego/graphql/language/typeInfo"
+	"deco/graphql/language/ast"
+	"deco/graphql/language/typeInfo"
 )
 
 const (

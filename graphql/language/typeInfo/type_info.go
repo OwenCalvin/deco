@@ -1,7 +1,7 @@
 package typeInfo
 
 import (
-	"dego/graphql/language/ast"
+	"deco/graphql/language/ast"
 )
 
 // TypeInfoI defines the interface for TypeInfo Implementation

@@ -1,7 +1,8 @@
 package definition
 
 import (
-	"dego/graphql/language/ast"
+	"deco/graphql/language/ast"
+	"deco/utils"
 	"fmt"
 	"reflect"
 )
@@ -16,29 +17,142 @@ type Schema struct {
 	MutationType     Type
 }
 
-func (s *Schema) Execute(
+func (s *Schema) Execute(AST *ast.Document) (res interface{}, err error) {
+	fragments := make(map[string]*ast.FragmentDefinition)
+	var executed *ast.OperationDefinition
+
+	for _, def := range AST.Definitions {
+		switch def.(type) {
+		case *ast.OperationDefinition:
+			executed = def.(*ast.OperationDefinition)
+		case *ast.FragmentDefinition:
+			f := def.(*ast.FragmentDefinition)
+			fragments[f.Name.Value] = f
+		}
+	}
+
+	selection := parseFragments(
+		&executed.SelectionSet.Selections,
+		fragments,
+	)
+
+	print(selection)
+
+	s.executeFields(executed, AST, fragments)
+
+	return nil, nil
+}
+
+func (s *Schema) ExecuteField(
 	operation string,
 	field string,
 	node *ast.Field,
 	fragments map[string]*ast.FragmentDefinition,
+	responseName string,
 ) (res interface{}, executedField *Field, err error) {
 	f, ok := s.TypeMap[operation].Fields[field]
 	if ok {
 		parsedArgs := parseArgs(&f, node.Arguments)
-		res := f.Resolve(f.TypeRef, parsedArgs, Infos{
+		var res interface{}
+		infos := Infos{
 			Field:     f,
 			Requested: *node,
-		})
-		return res, &f, nil
+		}
+
+		if f.DefaultValue != nil {
+			res = reflect.ValueOf(f.DefaultValue).Elem().Interface()
+		} else {
+			res = f.Resolve(f.TypeRef, parsedArgs, infos)
+		}
+
+		toSend := s.Send(res, infos, responseName)
+		return toSend, &f, nil
 	}
 	return nil, nil, fmt.Errorf("Operation not found")
 }
 
-func (s *Schema) Send(res interface{}, infos Infos) map[string]interface{} {
-	return selectFields(res, &infos.Requested.SelectionSet.Selections)
+// TODO: Recursive
+func (s *Schema) executeFields(
+	executed *ast.OperationDefinition,
+	AST *ast.Document,
+	fragments map[string]*ast.FragmentDefinition,
+) {
+	for i, selection := range executed.SelectionSet.Selections {
+		field := selection.(*ast.Field)
+		operation := AST.Definitions[i].(*ast.OperationDefinition).Operation
+		operation = utils.UpperFirstLetter(operation)
+
+		// Choose correct operation
+		// Only if selected
+		s.ExecuteField(
+			operation,
+			field.Name.Value,
+			field,
+			fragments,
+			executed.Name.Value,
+		)
+	}
 }
 
-func selectFields(obj interface{}, selections *[]ast.Selection) (res map[string]interface{}) {
+func (s *Schema) Send(
+	res interface{},
+	infos Infos,
+	responseName string,
+) map[string]map[string]interface{} {
+	if responseName == "" {
+		responseName = infos.Field.Name
+	}
+
+	return map[string]map[string]interface{}{
+		responseName: selectFields(
+			res,
+			&infos.Requested.SelectionSet.Selections,
+			&infos,
+		),
+	}
+}
+
+func parseFragments(
+	fieldRoot *[]ast.Selection,
+	fragments map[string]*ast.FragmentDefinition,
+) *[]ast.Selection {
+	for _, s := range *fieldRoot {
+		switch s.(type) {
+		case *ast.FragmentSpread:
+			f := s.(*ast.FragmentSpread)
+			fragmentValue := fragments[f.Name.Value]
+			newField := ast.NewField(&ast.Field{
+				Name:         fragmentValue.Name,
+				SelectionSet: fragmentValue.SelectionSet,
+				Directives:   fragmentValue.Directives,
+			})
+
+			appended := append(*fieldRoot, newField)
+			fieldRoot = &appended
+
+			parseFragments(
+				&newField.SelectionSet.Selections,
+				fragments,
+			)
+		case *ast.Field:
+			f := s.(*ast.Field)
+			if f.SelectionSet != nil {
+				parseFragments(
+					&f.SelectionSet.Selections,
+					fragments,
+				)
+			}
+		}
+	}
+
+	return fieldRoot
+}
+
+func selectFields(
+	obj interface{},
+	selections *[]ast.Selection,
+	infos *Infos,
+) (res map[string]interface{}) {
 	if selections == nil {
 		return nil
 	}
@@ -52,7 +166,13 @@ func selectFields(obj interface{}, selections *[]ast.Selection) (res map[string]
 
 		for _, s := range *selections {
 			f := s.(*ast.Field)
-			if f.Name.Value == rField.Name {
+			name := utils.LowerFirstLetter(rField.Name)
+			tagName := rField.Tag.Get("name")
+			if tagName != "" {
+				name = tagName
+			}
+
+			if f.Name.Value == name {
 				selected = f
 				break
 			}
@@ -67,7 +187,7 @@ func selectFields(obj interface{}, selections *[]ast.Selection) (res map[string]
 
 		switch rField.Type.Kind() {
 		case reflect.Struct:
-			v = selectFields(value, &selected.SelectionSet.Selections)
+			v = selectFields(value, selections, infos)
 		default:
 			v = value
 		}
@@ -81,13 +201,16 @@ func selectFields(obj interface{}, selections *[]ast.Selection) (res map[string]
 }
 
 func parseArgs(field *Field, args []*ast.Argument) interface{} {
-	structValue := reflect.New(field.ArgStructType)
+	if field.ArgStructType != nil {
+		structValue := reflect.New(field.ArgStructType)
 
-	for _, item := range args {
-		structValue.Elem().FieldByName(item.Name.Value).SetString(
-			item.Value.GetValue().(string),
-		)
+		for _, item := range args {
+			structValue.Elem().FieldByName(item.Name.Value).SetString(
+				item.Value.GetValue().(string),
+			)
+		}
+
+		return structValue.Elem().Interface()
 	}
-
-	return structValue.Elem().Interface()
+	return []interface{}{}
 }

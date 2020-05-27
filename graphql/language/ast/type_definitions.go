@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"dego/graphql/language/kinds"
+	"deco/graphql/language/kinds"
 )
 
 // DescribableNode are nodes that have descriptions associated with them.

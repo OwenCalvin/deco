@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"dego/graphql/errors"
-	"dego/graphql/language/source"
+	"deco/graphql/errors"
+	"deco/graphql/language/source"
 )
 
 type TokenKind int

@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"dego/graphql/language/kinds"
+	"deco/graphql/language/kinds"
 )
 
 type Selection interface {
@@ -15,6 +15,7 @@ var _ Selection = (*InlineFragment)(nil)
 
 // Field implements Node, Selection
 type Field struct {
+	Selection
 	Kind         string
 	Loc          *Location
 	Alias        *Name

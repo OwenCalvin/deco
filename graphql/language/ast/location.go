@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"dego/graphql/language/source"
+	"deco/graphql/language/source"
 )
 
 type Location struct {

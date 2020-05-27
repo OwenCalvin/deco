@@ -1,17 +1,21 @@
 package graphql
 
 import (
-	"dego/graphql/definition"
-	"dego/graphql/queries"
-	"dego/reflector"
+	"deco/graphql/definition"
+	"deco/graphql/queries"
+	"deco/reflector"
+	"deco/utils"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
+var specialQueryFields = []definition.Field{
+	queries.Schema,
+}
+
 func LoadTypes(r ...interface{}) (schema definition.Schema) {
 	types := r
-	types = append(types, &queries.IntrospectionQuery{})
 	reflections := reflector.ReflectTypes(types...)
 
 	schema = definition.Schema{
@@ -25,7 +29,11 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 		for _, field := range item.Fields {
 			fieldKey := field.Name
 			fieldValue := definition.Field{
-				Type: field.Type.Name(),
+				Type:         field.Type.Name(),
+				Name:         utils.LowerFirstLetter(field.Name),
+				OriginalName: field.Name,
+				TypeRef:      item.Original,
+				DefaultValue: nil,
 			}
 			fields[fieldKey] = fieldValue
 		}
@@ -36,15 +44,23 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 			args := definition.Arguments{}
 
 			if method.Type.NumOut() <= 0 {
-				panic(fmt.Errorf("You must specify a return type for %v.%v", item.Type.Elem().Name, queryName))
+				panic(
+					fmt.Errorf(
+						"You must specify a return type for %v.%v",
+						item.Type.Elem().Name(),
+						queryName,
+					),
+				)
 			}
 
 			returnType := method.Type.Out(0)
 			fieldValue := definition.Field{
-				Name:    queryName,
-				Type:    returnType.Name(),
-				TypeRef: item.Original,
-				Args:    args,
+				OriginalName: queryName,
+				Name:         utils.LowerFirstLetter(queryName),
+				Type:         returnType.Name(),
+				TypeRef:      item.Original,
+				Args:         args,
+				DefaultValue: nil,
 			}
 
 			if method.Type.NumIn() > 1 {
@@ -71,7 +87,7 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 					reflect.ValueOf(infos),
 				})
 
-				return schema.Send(res[0].Interface(), infos)
+				return res[0].Interface()
 			}
 
 			switch {
@@ -88,6 +104,17 @@ func LoadTypes(r ...interface{}) (schema definition.Schema) {
 			Name:        typeName,
 			Description: "",
 			Fields:      fields,
+		}
+
+		switch t.Name {
+		case "Query":
+			for _, q := range specialQueryFields {
+				t.Fields[q.Name] = q
+			}
+		}
+
+		for _, f := range t.Fields {
+			f.ParentType = &t
 		}
 
 		schema.TypeMap[typeName] = t

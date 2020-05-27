@@ -3,7 +3,7 @@ package location
 import (
 	"regexp"
 
-	"dego/graphql/language/source"
+	"deco/graphql/language/source"
 )
 
 type SourceLocation struct {

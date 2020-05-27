@@ -3,7 +3,7 @@ package errors
 import (
 	"errors"
 
-	"dego/graphql/language/location"
+	"deco/graphql/language/location"
 )
 
 type ExtendedError interface {

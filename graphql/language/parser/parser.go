@@ -3,10 +3,10 @@ package parser
 import (
 	"fmt"
 
-	"dego/graphql/errors"
-	"dego/graphql/language/ast"
-	"dego/graphql/language/lexer"
-	"dego/graphql/language/source"
+	"deco/graphql/errors"
+	"deco/graphql/language/ast"
+	"deco/graphql/language/lexer"
+	"deco/graphql/language/source"
 )
 
 type parseFn func(parser *Parser) (interface{}, error)

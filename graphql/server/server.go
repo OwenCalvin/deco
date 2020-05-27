@@ -2,9 +2,8 @@ package server
 
 import (
 	"bytes"
-	"dego/graphql/definition"
-	"dego/graphql/executor"
-	"dego/graphql/language/parser"
+	"deco/graphql/definition"
+	"deco/graphql/language/parser"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -35,7 +34,9 @@ func (r *Request) String() string {
 func parseRequest(request string) (res interface{}, err error) {
 	req := &Request{}
 	json.Unmarshal([]byte(request), req)
+
 	fmt.Println(req)
+
 	doc, _ := parser.Parse(parser.ParseParams{
 		Source: req.Query,
 		Options: parser.ParseOptions{
@@ -44,10 +45,7 @@ func parseRequest(request string) (res interface{}, err error) {
 		},
 	})
 
-	return executor.Execute(&executor.ExecutionParams{
-		Schema: Schema,
-		AST:    doc,
-	})
+	return Schema.Execute(doc)
 }
 
 func parseBody(r *http.Request) string {

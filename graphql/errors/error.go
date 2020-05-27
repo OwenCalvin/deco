@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"dego/graphql/language/ast"
-	"dego/graphql/language/location"
-	"dego/graphql/language/source"
+	"deco/graphql/language/ast"
+	"deco/graphql/language/location"
+	"deco/graphql/language/source"
 )
 
 type Error struct {
