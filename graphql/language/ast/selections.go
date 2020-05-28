@@ -15,7 +15,6 @@ var _ Selection = (*InlineFragment)(nil)
 
 // Field implements Node, Selection
 type Field struct {
-	Selection
 	Kind         string
 	Loc          *Location
 	Alias        *Name

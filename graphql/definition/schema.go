@@ -19,26 +19,30 @@ type Schema struct {
 
 func (s *Schema) Execute(AST *ast.Document) (res interface{}, err error) {
 	fragments := make(map[string]*ast.FragmentDefinition)
-	var executed *ast.OperationDefinition
+	var executed *ast.Field
 
 	for _, def := range AST.Definitions {
 		switch def.(type) {
 		case *ast.OperationDefinition:
-			executed = def.(*ast.OperationDefinition)
+			opExecuted := def.(*ast.OperationDefinition)
+			executed = ast.NewField(&ast.Field{
+				Name:         opExecuted.Name,
+				SelectionSet: opExecuted.SelectionSet,
+			})
 		case *ast.FragmentDefinition:
 			f := def.(*ast.FragmentDefinition)
 			fragments[f.Name.Value] = f
 		}
 	}
 
-	selection := parseFragments(
-		&executed.SelectionSet.Selections,
+	executable := *executed
+
+	parseFragments(
+		&executable,
 		fragments,
 	)
 
-	print(selection)
-
-	s.executeFields(executed, AST, fragments)
+	s.executeFields(&executable, AST, fragments)
 
 	return nil, nil
 }
@@ -73,7 +77,7 @@ func (s *Schema) ExecuteField(
 
 // TODO: Recursive
 func (s *Schema) executeFields(
-	executed *ast.OperationDefinition,
+	executed *ast.Field,
 	AST *ast.Document,
 	fragments map[string]*ast.FragmentDefinition,
 ) {
@@ -113,13 +117,14 @@ func (s *Schema) Send(
 }
 
 func parseFragments(
-	fieldRoot *[]ast.Selection,
+	fieldRoot *ast.Field,
 	fragments map[string]*ast.FragmentDefinition,
-) *[]ast.Selection {
-	for _, s := range *fieldRoot {
+) {
+	selections := (*fieldRoot).GetSelectionSet().Selections
+	for i, s := range selections {
 		switch s.(type) {
 		case *ast.FragmentSpread:
-			f := s.(*ast.FragmentSpread)
+			f := *s.(*ast.FragmentSpread)
 			fragmentValue := fragments[f.Name.Value]
 			newField := ast.NewField(&ast.Field{
 				Name:         fragmentValue.Name,
@@ -127,25 +132,22 @@ func parseFragments(
 				Directives:   fragmentValue.Directives,
 			})
 
-			appended := append(*fieldRoot, newField)
-			fieldRoot = &appended
-
 			parseFragments(
-				&newField.SelectionSet.Selections,
+				newField,
 				fragments,
 			)
+
+			selections[i] = newField
 		case *ast.Field:
-			f := s.(*ast.Field)
+			f := *s.(*ast.Field)
 			if f.SelectionSet != nil {
 				parseFragments(
-					&f.SelectionSet.Selections,
+					&f,
 					fragments,
 				)
 			}
 		}
 	}
-
-	return fieldRoot
 }
 
 func selectFields(
