@@ -3,7 +3,6 @@ package definition
 import (
 	"deco/graphql/language/ast"
 	"deco/utils"
-	"fmt"
 	"reflect"
 )
 
@@ -20,11 +19,14 @@ type Schema struct {
 func (s *Schema) Execute(AST *ast.Document) (res interface{}, err error) {
 	fragments := make(map[string]*ast.FragmentDefinition)
 	var executed *ast.Field
+	var opExecuted *ast.OperationDefinition
 
 	for _, def := range AST.Definitions {
 		switch def.(type) {
 		case *ast.OperationDefinition:
-			opExecuted := def.(*ast.OperationDefinition)
+			opExecuted = def.(*ast.OperationDefinition)
+			// TODO: VariableDefinition
+			// TODO: Alias
 			executed = ast.NewField(&ast.Field{
 				Name:         opExecuted.Name,
 				SelectionSet: opExecuted.SelectionSet,
@@ -42,59 +44,49 @@ func (s *Schema) Execute(AST *ast.Document) (res interface{}, err error) {
 		fragments,
 	)
 
-	s.executeFields(&executable, AST, fragments)
+	response := map[string]interface{}{}
+	s.ExecuteField(
+		&executable,
+		utils.UpperFirstLetter(opExecuted.Operation),
+		response,
+	)
 
 	return nil, nil
 }
 
-func (s *Schema) ExecuteField(
-	operation string,
-	field string,
-	node *ast.Field,
-	fragments map[string]*ast.FragmentDefinition,
-	responseName string,
-) (res interface{}, executedField *Field, err error) {
-	f, ok := s.TypeMap[operation].Fields[field]
-	if ok {
-		parsedArgs := parseArgs(&f, node.Arguments)
-		var res interface{}
-		infos := Infos{
-			Field:     f,
-			Requested: *node,
-		}
-
-		if f.DefaultValue != nil {
-			res = reflect.ValueOf(f.DefaultValue).Elem().Interface()
-		} else {
-			res = f.Resolve(f.TypeRef, parsedArgs, infos)
-		}
-
-		toSend := s.Send(res, infos, responseName)
-		return toSend, &f, nil
-	}
-	return nil, nil, fmt.Errorf("Operation not found")
-}
-
 // TODO: Recursive
-func (s *Schema) executeFields(
+func (s *Schema) ExecuteField(
 	executed *ast.Field,
-	AST *ast.Document,
-	fragments map[string]*ast.FragmentDefinition,
+	parent string,
+	r interface{},
 ) {
-	for i, selection := range executed.SelectionSet.Selections {
+	for _, selection := range executed.SelectionSet.Selections {
+		var value interface{}
 		field := selection.(*ast.Field)
-		operation := AST.Definitions[i].(*ast.OperationDefinition).Operation
-		operation = utils.UpperFirstLetter(operation)
 
-		// Choose correct operation
-		// Only if selected
-		s.ExecuteField(
-			operation,
-			field.Name.Value,
-			field,
-			fragments,
-			executed.Name.Value,
-		)
+		f, ok := s.TypeMap[parent].Fields[field.Name.Value]
+		if ok {
+			parsedArgs := parseArgs(&f, field.Arguments)
+			infos := Infos{
+				Field:     f,
+				Requested: *field,
+			}
+
+			if f.DefaultValue != nil {
+				value = reflect.ValueOf(f.DefaultValue).Elem().Interface()
+			} else {
+				value = f.Resolve(f.TypeRef, parsedArgs, infos)
+			}
+
+			mapped := utils.StructToMap(value)
+
+			if it, ok := r.(map[string]interface{}); ok {
+				s.ExecuteField(field, f.Type, it)
+				it[f.Name] = mapped
+			} else {
+				r = mapped
+			}
+		}
 	}
 }
 
