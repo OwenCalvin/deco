@@ -44,18 +44,24 @@ func (s *Schema) Execute(AST *ast.Document) (res interface{}, err error) {
 		fragments,
 	)
 
+	operationTypeName := utils.UpperFirstLetter(opExecuted.Operation)
 	response := map[string]interface{}{}
-	s.ExecuteField(
+	s.executeField(
 		&executable,
-		utils.UpperFirstLetter(opExecuted.Operation),
+		operationTypeName,
 		response,
 	)
 
-	return nil, nil
+	sendable := s.Send(
+		response,
+		executable,
+		opExecuted.Name.Value,
+	)
+
+	return sendable, nil
 }
 
-// TODO: Recursive
-func (s *Schema) ExecuteField(
+func (s *Schema) executeField(
 	executed *ast.Field,
 	parent string,
 	r interface{},
@@ -68,8 +74,7 @@ func (s *Schema) ExecuteField(
 		if ok {
 			parsedArgs := parseArgs(&f, field.Arguments)
 			infos := Infos{
-				Field:     f,
-				Requested: *field,
+				Field: field,
 			}
 
 			if f.DefaultValue != nil {
@@ -81,7 +86,7 @@ func (s *Schema) ExecuteField(
 			mapped := utils.StructToMap(value)
 
 			if it, ok := r.(map[string]interface{}); ok {
-				s.ExecuteField(field, f.Type, it)
+				s.executeField(field, f.Type, it)
 				it[f.Name] = mapped
 			} else {
 				r = mapped
@@ -91,19 +96,18 @@ func (s *Schema) ExecuteField(
 }
 
 func (s *Schema) Send(
-	res interface{},
-	infos Infos,
+	res map[string]interface{},
+	field ast.Field,
 	responseName string,
-) map[string]map[string]interface{} {
+) map[string]interface{} {
 	if responseName == "" {
-		responseName = infos.Field.Name
+		responseName = field.Name.Value
 	}
 
-	return map[string]map[string]interface{}{
+	return map[string]interface{}{
 		responseName: selectFields(
 			res,
-			&infos.Requested.SelectionSet.Selections,
-			&infos,
+			field.SelectionSet.Selections,
 		),
 	}
 }
@@ -142,53 +146,23 @@ func parseFragments(
 	}
 }
 
+// TODO: Find type definition for names
 func selectFields(
-	obj interface{},
-	selections *[]ast.Selection,
-	infos *Infos,
-) (res map[string]interface{}) {
-	if selections == nil {
-		return nil
-	}
+	obj map[string]interface{},
+	selections []ast.Selection,
+) interface{} {
+	res := map[string]interface{}{}
 
-	res = map[string]interface{}{}
-	value := reflect.ValueOf(obj)
-
-	for i := 0; i < value.NumField(); i++ {
-		var selected *ast.Field = nil
-		rField := value.Type().Field(i)
-
-		for _, s := range *selections {
-			f := s.(*ast.Field)
-			name := utils.LowerFirstLetter(rField.Name)
-			tagName := rField.Tag.Get("name")
-			if tagName != "" {
-				name = tagName
-			}
-
-			if f.Name.Value == name {
-				selected = f
-				break
+	for _, selection := range selections {
+		astField := selection.(*ast.Field)
+		value := obj[astField.Name.Value]
+		ss := astField.SelectionSet
+		if ss != nil {
+			if mapped, ok := value.(map[string]interface{}); ok {
+				value = selectFields(mapped, ss.Selections)
 			}
 		}
-
-		if selected == nil {
-			continue
-		}
-
-		var v interface{}
-		value := value.Field(i).Interface()
-
-		switch rField.Type.Kind() {
-		case reflect.Struct:
-			v = selectFields(value, selections, infos)
-		default:
-			v = value
-		}
-
-		if v != nil {
-			res[rField.Name] = v
-		}
+		res[astField.Name.Value] = value
 	}
 
 	return res

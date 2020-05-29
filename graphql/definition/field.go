@@ -4,11 +4,6 @@ import (
 	"reflect"
 )
 
-// FieldResolver represents implements the resolve func for a field
-type FieldResolver interface {
-	Resolve() interface{}
-}
-
 // Field represents a GraphQL field value
 type Field struct {
 	Resolve           func(ref interface{}, args interface{}, infos Infos) interface{}
